@@ -57,6 +57,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
 ROOT_URLCONF = 'gameweb.urls'
 

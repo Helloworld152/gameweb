@@ -1,16 +1,18 @@
 from django.contrib.auth import authenticate
-from .models import User
+from .models import User, Post
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-from .serializers import UserSerializer
+from .serializers import UserSerializer, PostSerializer
 
 from .SteamGame import SteamApi
 # Create your views here.
-
+@api_view(['GET'])
+def test(request):
+    return Response({'success': 1}, 200)
 
 @api_view(['POST'])
 def register(request):
@@ -78,3 +80,59 @@ def getSteamGameInfo(request):
     else:
         # 用户未登录，返回相应的错误信息
         return Response({'error': 'User is not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def unbindSteamUser(request):
+    if request.method == 'GET':
+        user = request.user
+        user.steamUserName = None
+        user.save()
+        return Response({'success': 1}, status=200)
+    else:
+        return Response({'success': 0, 'error': '请求方法错误'}, status=400)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def createPost(request):
+    if request.method == 'POST':
+        user = request.user
+        title = request.data.get('title')
+        content = request.data.get('content')
+
+        post = Post.objects.create(title=title, content=content, author=user)
+        serializer = PostSerializer(post)
+        return Response(serializer.data, status=201)
+    else:
+        return Response({'error': 'Only POST requests are allowed.'}, status=400)
+
+@api_view(['GET'])
+def getAllPosts(request):
+    posts = Post.objects.order_by('-create_time')
+    serializer = PostSerializer(posts, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def getMyPosts(request):
+    user = request.user
+    posts = Post.objects.filter(author=user).order_by('-create_time')
+    serializer = PostSerializer(posts, many=True)
+    return Response(serializer.data)
+
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def deletePost(request, post_id):
+    try:
+        post = Post.objects.get(id=post_id)
+    except Post.DoesNotExist:
+        return Response({"error": "Post not found"}, status=404)
+
+    post.delete()
+    return Response(status=204)

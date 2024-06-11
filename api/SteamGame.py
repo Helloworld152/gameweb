@@ -87,6 +87,7 @@ class SteamApi:
         }
         try:
             response = requests.get(url, params=params, proxies=proxies)
+            print(response.text)
             data = response.json()
             if "Specials" in data:
                 specials = data["Specials"]
