@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-from .serializers import UserSerializer, PostSerializer
+from .serializers import *
 
 from .SteamGame import SteamApi
 # Create your views here.
@@ -95,6 +95,7 @@ def unbindSteamUser(request):
         return Response({'success': 0, 'error': '请求方法错误'}, status=400)
 
 
+# 帖子相关功能
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -135,4 +136,39 @@ def deletePost(request, post_id):
         return Response({"error": "Post not found"}, status=404)
 
     post.delete()
+    return Response(status=204)
+
+
+# 评论功能
+@api_view(['GET', 'POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def postComments(request, post_id):
+    try:
+        post = Post.objects.get(id=post_id)
+    except Post.DoesNotExist:
+        return Response({'error': 'Post not found'}, status=404)
+
+    if request.method == 'GET':
+        comments = post.comments.all()
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        data = request.data
+        user = request.user
+        comment = Comment.objects.create(post=post, content=data['content'], author_id=user.id)
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data, status=201)
+
+
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def deleteComment(request, comment_id):
+    try:
+        comment = Comment.objects.get(id=comment_id)
+    except Post.DoesNotExist:
+        return Response({"error": "Post not found"}, status=404)
+
+    comment.delete()
     return Response(status=204)
