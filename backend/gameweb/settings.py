@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=39y@4_*cu(1v2pkm73)woi30fi5$wbmef0$h8@47=4)yds2=@'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-=39y@4_*cu(1v2pkm73)woi30fi5$wbmef0$h8@47=4)yds2=@')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', '1').lower() in {'1', 'true', 'yes', 'on'}
 
-ALLOWED_HOSTS = []
+def _split_env_list(value: str, fallback: str) -> list[str]:
+    source = value if value else fallback
+    return [item.strip() for item in source.split(',') if item.strip()]
+
+ALLOWED_HOSTS = _split_env_list(os.getenv('DJANGO_ALLOWED_HOSTS', ''), 'localhost,127.0.0.1,[::1]')
 
 
 # Application definition
@@ -56,8 +61,10 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware'
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+if not DEBUG:
+    cors_origins = os.getenv('DJANGO_CORS_ALLOWED_ORIGINS', '')
+    CORS_ALLOWED_ORIGINS = _split_env_list(cors_origins, '')
 
 ROOT_URLCONF = 'gameweb.urls'
 
@@ -127,6 +134,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.getenv('DJANGO_STATIC_ROOT', BASE_DIR / 'staticfiles')
+
+STEAM_API_KEY = os.getenv('STEAM_API_KEY', '')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

@@ -1,12 +1,12 @@
 from django.contrib.auth import authenticate
-from .models import User, Post
+from .models import User, Post, Comment
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-from .serializers import *
+from .serializers import UserSerializer, PostSerializer, CommentSerializer
 
 from .SteamGame import SteamApi
 # Create your views here.
@@ -43,7 +43,10 @@ def login(request):
 @permission_classes([IsAuthenticated])
 def bindSteamUser(request):
     if request.method == 'POST':
-        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        steam_username = request.data.get('steamUserName', '').strip()
+        if not steam_username:
+            return Response({'error': 'steamUserName 必填'}, status=400)
+        serializer = UserSerializer(request.user, data={'steamUserName': steam_username}, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({'success': 1}, status=200)
@@ -75,7 +78,16 @@ def getSteamGameInfo(request):
         user = request.user
         steamUserName = user.steamUserName
         steamApi = SteamApi()
-        gameInfo = steamApi.getOwnedGames(steamUserName)
+        if not steamUserName:
+            return Response({'error': 'Steam 用户名未绑定'}, status=400)
+        try:
+            gameInfo = steamApi.getOwnedGames(steamUserName)
+        except (ValueError, RuntimeError) as exc:
+            return Response({'error': str(exc)}, status=502)
+
+        if gameInfo is None:
+            return Response({'error': '无法获取 Steam 游戏数据'}, status=502)
+
         return Response(gameInfo, status=200)
     else:
         # 用户未登录，返回相应的错误信息
@@ -100,16 +112,17 @@ def unbindSteamUser(request):
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def createPost(request):
-    if request.method == 'POST':
-        user = request.user
-        title = request.data.get('title')
-        content = request.data.get('content')
+    title = request.data.get('title', '').strip()
+    content = request.data.get('content', '').strip()
 
-        post = Post.objects.create(title=title, content=content, author=user)
-        serializer = PostSerializer(post)
-        return Response(serializer.data, status=201)
-    else:
-        return Response({'error': 'Only POST requests are allowed.'}, status=400)
+    if not title:
+        return Response({'error': '标题不能为空'}, status=400)
+    if not content:
+        return Response({'error': '内容不能为空'}, status=400)
+
+    post = Post.objects.create(title=title, content=content, author=request.user)
+    serializer = PostSerializer(post)
+    return Response(serializer.data, status=201)
 
 @api_view(['GET'])
 def getAllPosts(request):
@@ -126,14 +139,21 @@ def getMyPosts(request):
     serializer = PostSerializer(posts, many=True)
     return Response(serializer.data)
 
-@api_view(['DELETE'])
+@api_view(['GET', 'DELETE'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def deletePost(request, post_id):
+def postDetail(request, post_id):
     try:
         post = Post.objects.get(id=post_id)
     except Post.DoesNotExist:
         return Response({"error": "Post not found"}, status=404)
+
+    if request.method == 'GET':
+        serializer = PostSerializer(post)
+        return Response(serializer.data, status=200)
+
+    if post.author_id != request.user.id and not request.user.is_staff:
+        return Response({'error': '没有权限删除此帖子'}, status=403)
 
     post.delete()
     return Response(status=204)
@@ -154,9 +174,11 @@ def postComments(request, post_id):
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
-        data = request.data
+        content = request.data.get('content', '').strip()
+        if not content:
+            return Response({'error': '评论内容不能为空'}, status=400)
         user = request.user
-        comment = Comment.objects.create(post=post, content=data['content'], author_id=user.id)
+        comment = Comment.objects.create(post=post, content=content, author_id=user.id)
         serializer = CommentSerializer(comment)
         return Response(serializer.data, status=201)
 
@@ -167,8 +189,11 @@ def postComments(request, post_id):
 def deleteComment(request, comment_id):
     try:
         comment = Comment.objects.get(id=comment_id)
-    except Post.DoesNotExist:
-        return Response({"error": "Post not found"}, status=404)
+    except Comment.DoesNotExist:
+        return Response({"error": "Comment not found"}, status=404)
+
+    if comment.author_id != request.user.id and not request.user.is_staff:
+        return Response({'error': '没有权限删除此评论'}, status=403)
 
     comment.delete()
     return Response(status=204)

@@ -12,7 +12,7 @@ urlpatterns = [
     path('myposts/', getMyPosts, name='getMyPosts'),
     path('allposts/', getAllPosts, name='getAllPosts'),
     path('newpost/', createPost, name='createPost'),
-    path('posts/<int:post_id>/', deletePost, name='deletePost'),
+    path('posts/<int:post_id>/', postDetail, name='postDetail'),
     path('posts/<int:post_id>/comments/', postComments, name='postComments'),
     path('comments/<int:comment_id>/', deleteComment, name='deleteComment')
 ]
