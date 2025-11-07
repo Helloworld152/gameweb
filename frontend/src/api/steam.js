@@ -1,7 +1,8 @@
 import http from './http'
 
-export const fetchSteamGames = async () => {
-  const { data } = await http.get('steamgameinfo/')
+export const fetchSteamGames = async ({ force = false } = {}) => {
+  const config = force ? { params: { force: '1' } } : undefined
+  const { data } = await http.get('steamgameinfo/', config)
   return data
 }
 

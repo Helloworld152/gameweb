@@ -5,6 +5,7 @@ from django.db import models
 class User(AbstractUser):
     steamUserName = models.CharField(max_length=255, blank=True, null=True)
 
+
 class Post(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
@@ -22,3 +23,12 @@ class Comment(models.Model):
 
     def __str__(self):
         return f'Comment by {self.author} on {self.post}'
+
+
+class SteamOwnedGame(models.Model):
+    user = models.OneToOneField(User, related_name='steam_owned_games', on_delete=models.CASCADE)
+    data = models.JSONField(default=list)
+    fetched_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Steam games of {self.user}'

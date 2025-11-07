@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from .models import User, Post, Comment
+from .models import User, Post, Comment, SteamOwnedGame
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
@@ -80,13 +80,29 @@ def getSteamGameInfo(request):
         steamApi = SteamApi()
         if not steamUserName:
             return Response({'error': 'Steam 用户名未绑定'}, status=400)
+
+        force_refresh = request.query_params.get('force', '').lower() in {'1', 'true', 'yes'}
+        cache_entry = SteamOwnedGame.objects.filter(user=user).first()
+
+        if cache_entry and not force_refresh:
+            return Response(cache_entry.data, status=200)
+
         try:
             gameInfo = steamApi.getOwnedGames(steamUserName)
         except (ValueError, RuntimeError) as exc:
+            if cache_entry:
+                return Response(cache_entry.data, status=200)
             return Response({'error': str(exc)}, status=502)
 
         if gameInfo is None:
+            if cache_entry:
+                return Response(cache_entry.data, status=200)
             return Response({'error': '无法获取 Steam 游戏数据'}, status=502)
+
+        SteamOwnedGame.objects.update_or_create(
+            user=user,
+            defaults={'data': gameInfo}
+        )
 
         return Response(gameInfo, status=200)
     else:
@@ -113,6 +129,7 @@ def unbindSteamUser(request):
         user = request.user
         user.steamUserName = None
         user.save()
+        SteamOwnedGame.objects.filter(user=user).delete()
         return Response({'success': 1}, status=200)
     else:
         return Response({'success': 0, 'error': '请求方法错误'}, status=400)

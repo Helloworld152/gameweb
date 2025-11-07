@@ -73,21 +73,22 @@ const loadGames = async ({ force = false } = {}) => {
     return
   }
 
+  const force_refresh = force
   const cached = readCache()
   if (cached) {
     steamGames.value = cached.data
     hasLoaded.value = true
-    if (!force && !cached.expired) {
+    if (!force_refresh && !cached.expired) {
       return
     }
-  } else if (hasLoaded.value && !force) {
+  } else if (hasLoaded.value && !force_refresh) {
     return
   }
 
   loadingGames.value = true
   error.value = ''
   try {
-    const data = await fetchSteamGames()
+    const data = await fetchSteamGames({ force: force_refresh })
     steamGames.value = Array.isArray(data) ? data : []
     hasLoaded.value = true
     writeCache(steamGames.value)
