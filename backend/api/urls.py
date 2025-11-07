@@ -9,6 +9,7 @@ urlpatterns = [
     path('unbindsteam/', unbindSteamUser, name='unbindsteam'),
     path('userinfo/', getUserInfo, name='getUserInfo'),
     path('steamgameinfo/', getSteamGameInfo, name='getSteamGameInfo'),
+    path('steamdiscounts/', getSteamDiscounts, name='getSteamDiscounts'),
     path('myposts/', getMyPosts, name='getMyPosts'),
     path('allposts/', getAllPosts, name='getAllPosts'),
     path('newpost/', createPost, name='createPost'),

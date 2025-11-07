@@ -1,28 +1,24 @@
-import os
-
 import requests
 from django.conf import settings
 
 
-DEFAULT_STEAM_API_KEY = '93829F96E9B5D556148B5F319BC0A9E0'
-api_key = getattr(settings, 'STEAM_API_KEY', None) or os.getenv('STEAM_API_KEY') or DEFAULT_STEAM_API_KEY
+STEAM_API_KEY = '93829F96E9B5D556148B5F319BC0A9E0'
+STEAM_REGION = 'cn'
+STEAM_LANGUAGE = 'schinese'
+HTTP_PROXY = 'http://127.0.0.1:7890'
+REQUEST_TIMEOUT = 15
 
-default_proxy = 'http://127.0.0.1:7890'
-http_proxy = os.getenv('HTTP_PROXY', default_proxy)
-https_proxy = os.getenv('HTTPS_PROXY', http_proxy or default_proxy)
+api_key = getattr(settings, 'STEAM_API_KEY', None) or STEAM_API_KEY
 
-proxies = {}
-if http_proxy:
-    proxies['http'] = http_proxy
-if https_proxy:
-    proxies['https'] = https_proxy
-
-request_timeout = float(os.getenv('STEAM_HTTP_TIMEOUT', '15'))
+proxies = {
+    'http': HTTP_PROXY,
+    'https': HTTP_PROXY
+}
 
 
 def _get(url, *, params=None):
     try:
-        response = requests.get(url, params=params, proxies=proxies or None, timeout=request_timeout)
+        response = requests.get(url, params=params, proxies=proxies, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response
     except requests.RequestException as exc:
@@ -84,9 +80,28 @@ class SteamApi:
 
         url = "https://store.steampowered.com/api/featuredcategories"
         params = {
-            'key': self.api_key
+            'key': self.api_key,
+            'cc': STEAM_REGION,
+            'l': STEAM_LANGUAGE
         }
         response = _get(url, params=params)
         data = response.json()
-        return data.get("Specials")
+        specials = data.get("Specials", {})
+        items = specials.get('items') or specials.get('large_capsules') or []
+        deals = []
+        for item in items:
+            deals.append({
+                'appid': item.get('id') or item.get('appid'),
+                'name': item.get('name'),
+                'discount_percent': item.get('discount_percent'),
+                'original_price': item.get('original_price'),
+                'final_price': item.get('final_price'),
+                'header_image': item.get('large_capsule') or item.get('small_capsule') or item.get('header'),
+                'capsule_image': item.get('small_capsule'),
+                'url': item.get('url'),
+                'reviews_summary': item.get('reviews_summary'),
+                'platform_icons': item.get('platform_icons'),
+                'tags': item.get('tags')
+            })
+        return [deal for deal in deals if deal['name']][:40]
 

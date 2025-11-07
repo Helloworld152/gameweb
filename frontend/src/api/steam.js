@@ -13,3 +13,8 @@ export const unbindSteamAccount = async () => {
   await http.get('unbindsteam/')
 }
 
+export const fetchDiscountedGames = async () => {
+  const { data } = await http.get('steamdiscounts/')
+  return data
+}
+

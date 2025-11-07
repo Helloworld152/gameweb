@@ -23,6 +23,7 @@ const logout = () => {
     <div class="brand">Steam 游戏社区</div>
     <nav class="nav-links">
       <RouterLink :to="{ name: 'posts' }">社区</RouterLink>
+      <RouterLink :to="{ name: 'deals' }">优惠</RouterLink>
       <RouterLink :to="{ name: 'dashboard' }">个人中心</RouterLink>
     </nav>
     <div class="user-panel">

@@ -95,6 +95,17 @@ def getSteamGameInfo(request):
 
 
 @api_view(['GET'])
+def getSteamDiscounts(request):
+    steamApi = SteamApi()
+    try:
+        deals = steamApi.getDiscountedGames()
+    except (ValueError, RuntimeError) as exc:
+        return Response({'error': str(exc)}, status=502)
+
+    return Response(deals or [], status=200)
+
+
+@api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def unbindSteamUser(request):

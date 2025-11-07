@@ -20,6 +20,7 @@ Vue 前端 → REST API → Django 服务 → SQLite/PostgreSQL
 
 ## 3. 功能清单
 - 前端界面：登录/注册、帖子列表与详情、评论区、个人中心（含 Steam 绑定与游玩时长展示）。
+- Steam 促销页面：展示实时折扣、搜索/过滤与多视图切换。
 - 后端 API：用户、帖子、评论、Steam 数据同步。
 
 ### 规划增强
@@ -38,6 +39,7 @@ Vue 前端 → REST API → Django 服务 → SQLite/PostgreSQL
 | 绑定 Steam | POST | `/api/bindsteam/` | 需 Token，提交 `steamUserName` |
 | 获取 Steam 数据 | GET | `/api/steamgameinfo/` | 需 Token（需先绑定） |
 | 解绑 Steam | GET | `/api/unbindsteam/` | 需 Token |
+| 获取 Steam 促销 | GET | `/api/steamdiscounts/` | 公共 |
 | 创建帖子 | POST | `/api/newpost/` | 需 Token |
 | 全部帖子 | GET | `/api/allposts/` | 公共 |
 | 我的帖子 | GET | `/api/myposts/` | 需 Token |

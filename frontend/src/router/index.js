@@ -29,6 +29,11 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/deals',
+      name: 'deals',
+      component: () => import('../views/SteamDealsView.vue')
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('../views/DashboardView.vue'),
